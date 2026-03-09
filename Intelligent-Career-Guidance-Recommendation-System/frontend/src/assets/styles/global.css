@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-ai-bg text-ai-text antialiased;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  }
+}
+
+@layer components {
+  .primary-background {
+    @apply bg-ai-gradient min-h-screen;
+  }
+
+  .card-container {
+    @apply rounded-2xl border border-blue-400/20 bg-ai-card/90 shadow-card backdrop-blur;
+  }
+
+  .button-gradient {
+    @apply rounded-xl bg-button-gradient px-5 py-2.5 font-semibold text-white transition duration-300 hover:shadow-glow;
+  }
+
+  .hover-lift {
+    @apply transition duration-300 hover:-translate-y-1 hover:shadow-glow;
+  }
+
+  .soft-border {
+    @apply border border-blue-300/20;
+  }
+
+  .section-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .glass-nav {
+    @apply border-b border-blue-300/20 bg-[#0b1d33]/70 backdrop-blur-lg;
+  }
+
+  .cta-grid {
+    background-image: linear-gradient(rgba(59, 130, 246, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.12) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
