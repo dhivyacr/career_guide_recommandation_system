@@ -5,5 +5,17 @@ export const getAdminAnalytics = () => {
 };
 
 export const getStudents = () => {
-  return API.get("/admin/students");
+  return API.get("/students");
+};
+
+export const getStudentByRegisterNumber = (registerNumber) => {
+  return API.get(`/student/${registerNumber}`);
+};
+
+export const saveAdminGuidance = (registerNumber, adminGuidance) => {
+  return API.put(`/admin/guidance/${registerNumber}`, { adminGuidance });
+};
+
+export const addMentorGuidance = (studentId, message) => {
+  return API.post(`/admin/guidance/${studentId}`, { message });
 };

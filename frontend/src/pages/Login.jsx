@@ -1,50 +1,85 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google";
 import { loginUser } from "../services/api";
 import "./Login.css";
 
 function Login() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState("student");
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
 
-  function parseGoogleName(credential = "") {
-    try {
-      const payload = credential.split(".")[1];
-      if (!payload) {
-        return "Google Student";
-      }
-      const parsed = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-      return parsed.name || "Google Student";
-    } catch {
-      return "Google Student";
+  function handleBack() {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
     }
+
+    navigate("/");
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
-    try {
-      const response = await loginUser(form);
-      const token = response.data?.token;
-      const user = response.data?.user;
+    const normalizedEmail = String(form.email || "").trim().toLowerCase();
 
-      if (!token || !user?.role) {
+    if (!normalizedEmail.endsWith("@bitsathy.ac.in")) {
+      setMessage("Only BIT email IDs are allowed");
+      return;
+    }
+
+    try {
+      const response = await loginUser({ ...form, email: normalizedEmail });
+      const user = response.data?.user;
+      const student = response.data?.student;
+      const role = response.data?.role || user?.role;
+      const token = response.data?.token;
+
+      if (!role || !token) {
         setMessage("Invalid login response from server.");
         return;
       }
 
       localStorage.setItem("token", token);
-      localStorage.setItem("role", user.role);
-      localStorage.setItem("userName", user.name || "");
-
-      if (user.role === "admin") {
-        navigate("/admin-dashboard", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
+      localStorage.setItem("role", role);
+      localStorage.setItem("userName", user?.name || "");
+      if (student || user?.registerNumber) {
+        const existingProfile = JSON.parse(localStorage.getItem("studentProfile") || "{}");
+        localStorage.setItem(
+          "studentProfile",
+          JSON.stringify({
+            ...existingProfile,
+            name: student?.name || user?.name || existingProfile.name || "",
+            email: student?.email || user?.email || existingProfile.email || "",
+            registerNumber: student?.registerNumber || user?.registerNumber || existingProfile.registerNumber || "",
+            department: student?.department || existingProfile.department || "",
+            cgpa: student?.cgpa ?? existingProfile.cgpa ?? 0,
+            skills: student?.skills || existingProfile.skills || [],
+            interests: student?.interests || existingProfile.interests || []
+          })
+        );
       }
+
+      if (role === "faculty") {
+        navigate("/mentor-dashboard");
+        return;
+      }
+
+      if (role === "admin") {
+        navigate("/mentor-dashboard");
+        return;
+      }
+
+      if (role === "mentor") {
+        navigate("/mentor-dashboard");
+        return;
+      }
+
+      if (role === "student") {
+        navigate("/dashboard");
+        return;
+      }
+
+      setMessage("Invalid login response from server.");
     } catch (error) {
       setMessage(error.response?.data?.message || "Login failed");
     }
@@ -68,6 +103,9 @@ function Login() {
           <span className="logo-text">Intelligent Career Guidance</span>
         </div>
         <div className="login-top-links">
+          <button type="button" onClick={handleBack}>
+            Back
+          </button>
           <button type="button">Support</button>
           <button type="button">Help Center</button>
         </div>
@@ -76,23 +114,10 @@ function Login() {
       <section className="login-center login-wrapper">
         <div className="login-intro">
           <h1 className="login-title">Welcome Back</h1>
-          <p>Please enter your credentials to access your career guidance dashboard.</p>
+          <p>Please enter your BIT email to access the career guidance dashboard.</p>
         </div>
 
         <div className="login-modern-card login-card">
-          <div className="login-tabs">
-            <button
-              type="button"
-              onClick={() => setMode("student")}
-              className={mode === "student" ? "active" : ""}
-            >
-              Student Login
-            </button>
-            <button type="button" onClick={() => setMode("admin")} className={mode === "admin" ? "active" : ""}>
-              Admin Login
-            </button>
-          </div>
-
           <form className="login-form" onSubmit={handleSubmit}>
             <label className="field-wrap" htmlFor="email">
               <span className="field-icon" aria-hidden="true">
@@ -101,7 +126,7 @@ function Login() {
               <input
                 id="email"
                 type="email"
-                placeholder="Email Address"
+                placeholder="Email Address (@bitsathy.ac.in)"
                 value={form.email}
                 onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
                 required
@@ -134,38 +159,6 @@ function Login() {
               Sign In to Account
             </button>
           </form>
-
-          {mode === "student" ? (
-            <>
-              <div className="login-divider">
-                <span>OR</span>
-              </div>
-              <div className="google-login-wrapper">
-                <GoogleLogin
-                  onSuccess={(credentialResponse) => {
-                    console.log("Google login success");
-                    console.log("Google login success:", credentialResponse);
-                    const credential = credentialResponse?.credential || "";
-
-                    localStorage.setItem("google_token", credential);
-                    localStorage.setItem("token", credential);
-                    localStorage.setItem("role", "student");
-                    localStorage.setItem("userName", parseGoogleName(credential));
-
-                    navigate("/profile", { replace: true });
-                  }}
-                  onError={() => {
-                    console.log("Google login failed");
-                  }}
-                />
-              </div>
-            </>
-          ) : null}
-
-          <div className="security-info">
-            <span>256-bit SSL Encryption</span>
-            <span>Secure Data Storage</span>
-          </div>
 
           {message ? <p className="login-message">{message}</p> : null}
         </div>

@@ -7,7 +7,7 @@ function AdminSidebar() {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("userName");
-    navigate("/login", { replace: true });
+    navigate("/login");
   }
 
   return (

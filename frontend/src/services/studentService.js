@@ -1,11 +1,9 @@
-import axios from "axios";
+import API from "./api";
 
 export const saveStudentProfile = (data) => {
-  return axios.post("http://localhost:5000/api/student/profile", data);
+  return API.post("/student/profile", data);
 };
 
-export const getStudentProfile = (regNo) => {
-  return axios.get("http://localhost:5000/api/student/profile", {
-    params: { regNo }
-  });
+export const getStudentProfile = () => {
+  return API.get("/student/profile");
 };

@@ -1,5 +1,9 @@
-import axios from "axios";
+import API from "./api";
 
 export const getCareerRecommendations = (profile) => {
-  return axios.post("http://localhost:5000/api/careers/recommend", profile);
+  return API.post("/careers/recommend", profile);
+};
+
+export const getCareerDetails = (registerNumber) => {
+  return API.get(`/career/${registerNumber}`);
 };

@@ -1,23 +1,65 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProfileCard from "../components/ProfileCard";
-import { saveStudentProfile } from "../services/studentService";
+import { getStudentProfile, saveStudentProfile } from "../services/studentService";
 
 function StudentProfile() {
   const navigate = useNavigate();
   const stored = JSON.parse(localStorage.getItem("studentProfile") || "{}");
   const [profile, setProfile] = useState({
     name: stored.name || "",
-    regNo: stored.regNo || "",
+    regNo: stored.regNo || stored.registerNumber || "",
     education: stored.education || "",
     degree: stored.degree || "",
     gpa: stored.gpa || "",
     graduation: stored.graduation || "",
     skills: stored.skills || "",
-    softSkills: stored.softSkills || "",
-    interests: stored.interests || "",
     careerGoal: stored.careerGoal || ""
   });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadProfile() {
+      try {
+        const response = await getStudentProfile();
+        const student = response.data?.student;
+
+        if (!mounted || !student) {
+          return;
+        }
+
+        const nextProfile = {
+          name: student.name || "",
+          regNo: student.regNo || student.registerNumber || "",
+          education: student.education || student.educationLevel || "",
+          degree: student.degree || student.department || "",
+          gpa: student.gpa || student.cgpa || "",
+          graduation: student.graduation || "",
+          skills: Array.isArray(student.technicalSkills || student.skills)
+            ? (student.technicalSkills || student.skills).join(", ")
+            : "",
+          careerGoal: student.careerGoal || ""
+        };
+
+        setProfile(nextProfile);
+        localStorage.setItem("studentProfile", JSON.stringify(nextProfile));
+      } catch (error) {
+        // Keep the localStorage fallback state if the profile call fails.
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleChange = (e) => {
     setProfile({ ...profile, [e.target.name]: e.target.value });
@@ -28,22 +70,24 @@ function StudentProfile() {
     try {
       const payload = {
         ...profile,
+        email: stored.email || "",
+        registerNumber: profile.regNo,
+        department: profile.degree,
+        cgpa: profile.gpa,
         technicalSkills: String(profile.skills || "")
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean),
-        softSkills: String(profile.softSkills || "")
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean),
-        interests: String(profile.interests || "")
           .split(",")
           .map((value) => value.trim())
           .filter(Boolean)
       };
 
+      console.log("Saving student profile payload:", payload);
       await saveStudentProfile(payload);
-      localStorage.setItem("studentProfile", JSON.stringify(profile));
+      localStorage.setItem(
+        "studentProfile",
+        JSON.stringify({
+          ...profile
+        })
+      );
       alert("Profile saved successfully");
       navigate("/career");
     } catch (error) {
@@ -58,6 +102,7 @@ function StudentProfile() {
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[#b4c3d9]">
           Our AI needs to know you better to recommend the most accurate career paths and learning resources.
         </p>
+        {loading ? <p className="mt-3 text-sm text-[#8da7c9]">Loading your profile...</p> : null}
       </section>
 
       <ProfileCard variant="welcome" />
@@ -129,20 +174,6 @@ function StudentProfile() {
               name="skills"
               placeholder="Technical Skills"
               value={profile.skills}
-              onChange={handleChange}
-              className="rounded-xl border border-white/10 bg-[#0b1f36] px-4 py-3 text-sm text-white outline-none placeholder:text-[#8da7c9] focus:border-blue-400/60"
-            />
-            <input
-              name="softSkills"
-              placeholder="Soft Skills"
-              value={profile.softSkills}
-              onChange={handleChange}
-              className="rounded-xl border border-white/10 bg-[#0b1f36] px-4 py-3 text-sm text-white outline-none placeholder:text-[#8da7c9] focus:border-blue-400/60"
-            />
-            <input
-              name="interests"
-              placeholder="Areas of Interest"
-              value={profile.interests}
               onChange={handleChange}
               className="rounded-xl border border-white/10 bg-[#0b1f36] px-4 py-3 text-sm text-white outline-none placeholder:text-[#8da7c9] focus:border-blue-400/60"
             />

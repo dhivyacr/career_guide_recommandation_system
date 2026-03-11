@@ -3,7 +3,6 @@ dotenv.config();
 
 const express = require("express");
 const cors = require("cors");
-const bcrypt = require("bcryptjs");
 
 const connectDB = require("./config/db");
 const apiRoutes = require("./routes");
@@ -16,36 +15,10 @@ const aiAdviceRoutes = require("./routes/aiAdviceRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const adminNoteRoutes = require("./routes/adminNoteRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-const User = require("./models/User");
-
-console.log("Loaded Gemini Key:", process.env.GEMINI_API_KEY);
+const mentorRoutes = require("./routes/mentorRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const DEFAULT_ADMIN_EMAIL = "admin@careerai.com";
-const DEFAULT_ADMIN_PASSWORD = "admin123";
-
-async function createDefaultAdmin() {
-  const admin = await User.findOne({ email: DEFAULT_ADMIN_EMAIL });
-
-  if (!admin) {
-    const hashedPassword = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, 10);
-    await User.create({
-      name: "Admin",
-      email: DEFAULT_ADMIN_EMAIL,
-      password: hashedPassword,
-      role: "admin"
-    });
-    console.log("Default admin created");
-    return;
-  }
-
-  if (admin.role !== "admin") {
-    admin.role = "admin";
-    await admin.save();
-    console.log("Existing user upgraded to admin role");
-  }
-}
 
 // Middleware
 app.use(cors());
@@ -69,14 +42,16 @@ app.get("/health", (req, res) => {
    API Routes
 -------------------------------- */
 app.use("/api", apiRoutes);
-app.use("/api/student", studentRoutes);
+app.use("/api", studentRoutes);
 app.use("/api/careers", recommendRoutes);
+app.use("/api/career", recommendRoutes);
 app.use("/api/skills", skillGapRoutes);
 app.use("/api/learning", learningPathRoutes);
 app.use("/api/ai", aiAdviceRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin-notes", adminNoteRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/mentor", mentorRoutes);
 
 /* -------------------------------
    Global error handler
@@ -102,8 +77,6 @@ connectDB()
     if (seedResult.seeded) {
       console.log(`Career seed completed with ${seedResult.count} records`);
     }
-
-    await createDefaultAdmin();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

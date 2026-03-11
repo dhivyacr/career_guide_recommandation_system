@@ -1,7 +1,7 @@
 function CareerCard({ career, isBestMatch = false }) {
   return (
     <article
-      className={`career-card rounded-2xl bg-[#0f2747] p-6 transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] ${isBestMatch ? "best-glow" : ""}`}
+      className={`career-card rounded-xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] ${isBestMatch ? "best-glow" : ""}`}
     >
       {isBestMatch ? <div className="best-match-badge">Best Match ⭐</div> : null}
       <h3 className="text-xl font-semibold text-white">{career.careerName}</h3>

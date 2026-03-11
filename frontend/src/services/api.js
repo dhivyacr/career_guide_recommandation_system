@@ -9,7 +9,6 @@ const API = axios.create({
 
 const existingToken = localStorage.getItem("token");
 if (existingToken) {
-  axios.defaults.headers.common.Authorization = `Bearer ${existingToken}`;
   API.defaults.headers.common.Authorization = `Bearer ${existingToken}`;
 }
 
@@ -17,11 +16,9 @@ API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 
   if (token) {
-    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
     config.headers.Authorization = `Bearer ${token}`;
     API.defaults.headers.common.Authorization = `Bearer ${token}`;
   } else {
-    delete axios.defaults.headers.common.Authorization;
     delete config.headers.Authorization;
     delete API.defaults.headers.common.Authorization;
   }
@@ -29,7 +26,25 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-export const getDashboardData = (data) => API.post("/dashboard", data);
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("studentProfile");
+
+      if (window.location.pathname !== "/login") {
+        window.location.replace("/login");
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export const getDashboardData = () => API.get("/dashboard");
 export const loginUser = (data) => API.post("/auth/login", data);
 export const getAdminAnalytics = () => API.get("/admin/analytics");
 export const getAdminStudents = () => API.get("/admin/students");

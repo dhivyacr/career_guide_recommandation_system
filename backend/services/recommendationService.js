@@ -1,67 +1,86 @@
-const { careers } = require("../data/careers");
+const careerProfiles = {
+  "Machine Learning Engineer": {
+    skills: ["Python", "ML", "Statistics", "TensorFlow"],
+    description: "Strong fit for students building models and intelligent systems."
+  },
+  "Frontend Developer": {
+    skills: ["HTML", "CSS", "React", "JavaScript"],
+    description: "Best suited for students focused on user interfaces and web experiences."
+  },
+  "Data Analyst": {
+    skills: ["SQL", "Python", "Excel", "Data Visualization"],
+    description: "Ideal for students interested in analytics, reporting, and decision support."
+  },
+  "Software Engineer": {
+    skills: ["Java", "Python", "Data Structures", "Algorithms"],
+    description: "Broad engineering path for students interested in scalable software systems."
+  }
+};
 
-function normalizeSkills(values = []) {
-  return values.map((value) => String(value).trim().toLowerCase()).filter(Boolean);
+function normalize(values = []) {
+  return values.map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
 }
 
-function getStudentSkills(profile = {}) {
-  const rawSkills = Array.isArray(profile.skills) ? profile.skills : [];
-  const rawTechnicalSkills = Array.isArray(profile.technicalSkills) ? profile.technicalSkills : [];
-  return normalizeSkills([...rawSkills, ...rawTechnicalSkills]);
+function collectSkills(student = {}) {
+  const directSkills = Array.isArray(student.skills) ? student.skills : [];
+  const technicalSkills = Array.isArray(student.technicalSkills) ? student.technicalSkills : [];
+  return normalize([...directSkills, ...technicalSkills]);
 }
 
-function recommendCareer(profile = {}) {
-  const normalizedSkillsArray = getStudentSkills(profile);
-  const skillsFromString = String(profile.skills || "")
-    .toLowerCase()
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const skills = [...normalizedSkillsArray, ...skillsFromString].join(" ").toLowerCase();
+function collectInterests(student = {}) {
+  return normalize(Array.isArray(student.interests) ? student.interests : []);
+}
 
-  if (
-    skills.includes("react") ||
-    skills.includes("html") ||
-    skills.includes("css") ||
-    skills.includes("javascript") ||
-    skills.includes("tailwind")
-  ) {
+function recommendCareer(student = {}) {
+  const skills = collectSkills(student);
+  const interests = collectInterests(student);
+
+  if (skills.includes("python") && (skills.includes("ml") || skills.includes("machine learning"))) {
+    return "Machine Learning Engineer";
+  }
+
+  if (skills.includes("html") && skills.includes("css") && (skills.includes("react") || skills.includes("javascript"))) {
     return "Frontend Developer";
   }
 
-  if (skills.includes("python") || skills.includes("machine learning") || skills.includes("data")) {
-    return "Data Scientist";
+  if (skills.includes("sql") && skills.includes("python")) {
+    return "Data Analyst";
   }
 
-  if (skills.includes("java") || skills.includes("spring") || skills.includes("system design")) {
-    return "Backend Developer";
+  if (skills.includes("python") && interests.includes("ai")) {
+    return "Machine Learning Engineer";
   }
 
   return "Software Engineer";
 }
 
 function recommendCareers(student = {}) {
-  const studentSkills = getStudentSkills(student);
+  const studentSkills = collectSkills(student);
 
-  return careers
-    .map((career) => {
-      const careerSkillsNormalized = normalizeSkills(career.skills);
-      const matches = career.skills.filter((skill) => studentSkills.includes(skill.toLowerCase()));
-      const score = careerSkillsNormalized.length
-        ? Math.round((matches.length / careerSkillsNormalized.length) * 100)
-        : 0;
+  return Object.entries(careerProfiles)
+    .map(([title, profile]) => {
+      const normalizedRequired = normalize(profile.skills);
+      const matchedSkills = profile.skills.filter((skill) =>
+        studentSkills.includes(String(skill).trim().toLowerCase())
+      );
+      const missingSkills = profile.skills.filter((skill) =>
+        !studentSkills.includes(String(skill).trim().toLowerCase())
+      );
 
       return {
-        title: career.title,
-        matchScore: score,
-        matchedSkills: matches,
-        requiredSkills: career.skills
+        title,
+        description: profile.description,
+        matchScore: normalizedRequired.length ? Math.round((matchedSkills.length / normalizedRequired.length) * 100) : 0,
+        matchedSkills,
+        missingSkills,
+        requiredSkills: profile.skills
       };
     })
     .sort((a, b) => b.matchScore - a.matchScore);
 }
 
 module.exports = {
+  careerProfiles,
   recommendCareer,
   recommendCareers
 };

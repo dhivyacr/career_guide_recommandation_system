@@ -1,11 +1,11 @@
 function SkillBar({ skill, percentage = 0 }) {
   const value = Math.max(0, Math.min(100, Number(percentage) || 0));
 
-  let fillClass = "bg-blue-500";
+  let fillClass = "bg-gradient-to-r from-blue-400 to-cyan-400";
   if (value < 50) {
-    fillClass = "bg-orange-400";
+    fillClass = "bg-gradient-to-r from-orange-400 to-amber-300";
   } else if (value > 80) {
-    fillClass = "bg-emerald-400";
+    fillClass = "bg-gradient-to-r from-emerald-400 to-green-300";
   }
 
   return (
@@ -14,7 +14,7 @@ function SkillBar({ skill, percentage = 0 }) {
         <span>{skill}</span>
         <span>{value}%</span>
       </div>
-      <div className="h-2 rounded-full bg-white/10">
+      <div className="w-full rounded-full bg-slate-800 h-2">
         <div className={`h-2 rounded-full ${fillClass}`} style={{ width: `${value}%` }} />
       </div>
     </div>

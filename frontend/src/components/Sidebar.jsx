@@ -1,14 +1,16 @@
-import { NavLink, useNavigate } from "react-router-dom";
-import { FiGrid, FiUser, FiMap, FiLogOut } from "react-icons/fi";
+import { motion } from "framer-motion";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { FiBriefcase, FiGrid, FiLogOut, FiMap, FiSettings, FiUser } from "react-icons/fi";
 
 function Sidebar({ title = "Menu", active = "", role: roleProp, variant = "default" }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const role = roleProp || localStorage.getItem("role") || "student";
 
   if (variant === "studentDashboard" || (variant === "default" && role === "student")) {
     const profile = JSON.parse(localStorage.getItem("studentProfile") || "{}");
     const displayName = profile.name || localStorage.getItem("userName") || "Alex Johnson";
-    const displayProgram = profile.degree || "Computer Science";
+    const displayProgram = profile.degree || "B.S. Computer Science";
     const initials = displayName
       .split(" ")
       .map((part) => part[0])
@@ -19,53 +21,66 @@ function Sidebar({ title = "Menu", active = "", role: roleProp, variant = "defau
     const links = [
       { label: "Dashboard", icon: FiGrid, to: "/dashboard" },
       { label: "Profile", icon: FiUser, to: "/profile" },
-      { label: "Career", icon: FiMap, to: "/career" }
+      { label: "Careers", icon: FiBriefcase, to: "/career" },
+      { label: "Settings", icon: FiSettings, to: "/settings" }
     ];
 
     function handleLogout() {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("userName");
-      navigate("/login", { replace: true });
+      navigate("/login");
     }
 
     return (
-      <aside className="fixed left-0 top-0 flex h-screen w-[260px] flex-col justify-between border-r border-white/5 bg-[#0f2747] p-4 shadow-[0_0_35px_rgba(59,130,246,0.14)]">
-        <div>
-          <div className="rounded-xl border border-white/10 bg-[#112f53] px-4 py-3">
-            <p className="text-lg font-semibold text-white">CareerGuide AI</p>
+      <aside className="fixed left-0 top-0 flex h-screen w-[260px] flex-col justify-between border-r border-white/10 bg-[linear-gradient(180deg,#0f172a,#1e293b)] px-5 py-7 shadow-2xl">
+        <div className="flex flex-1 flex-col">
+          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-4 shadow-2xl backdrop-blur-xl">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 to-cyan-300 text-lg font-semibold text-slate-950 shadow-[0_0_24px_rgba(59,130,246,0.45)]">
+              E
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-white">EduPath</p>
+              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Student Portal</p>
+            </div>
           </div>
 
-          <nav className="mt-6 space-y-2">
+          <nav className="mt-[30px] flex flex-col gap-[14px]">
             {links.map((item) => {
               const Icon = item.icon;
+              const isActive = location.pathname === item.to;
               return (
-                <NavLink
+                <motion.div
                   key={`${item.label}-${item.to}`}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-full px-4 py-2.5 text-sm transition ${
-                      isActive ? "bg-[#3b82f6] text-white" : "text-[#c7d6eb] hover:bg-white/5"
-                    }`
-                  }
+                  whileHover={{ x: 4 }}
+                  transition={{ type: "spring", stiffness: 320, damping: 24 }}
                 >
-                  <Icon className="text-base" />
-                  <span>{item.label}</span>
-                </NavLink>
+                  <NavLink
+                    to={item.to}
+                    className={`flex items-center gap-[14px] rounded-xl px-4 py-3 transition-all duration-200 ${
+                      isActive
+                        ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-[0_4px_14px_rgba(0,0,0,0.25)]"
+                        : "text-slate-300 hover:bg-[rgba(59,130,246,0.15)] hover:text-white"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                </motion.div>
               );
             })}
           </nav>
         </div>
 
-        <div className="space-y-3">
-          <div className="rounded-xl border border-white/10 bg-[#112f53] p-3">
+        <div className="mt-auto space-y-[10px] pt-6">
+          <div className="rounded-[14px] border border-white/10 bg-white/5 p-4 shadow-2xl backdrop-blur-xl">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3b82f6]/25 text-sm font-semibold text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-sm font-bold text-white">
                 {initials || "AJ"}
               </div>
               <div>
                 <p className="text-sm font-semibold text-white">{displayName}</p>
-                <p className="text-xs text-[#b4c3d9]">{displayProgram}</p>
+                <p className="text-xs text-slate-400">{displayProgram}</p>
               </div>
             </div>
           </div>
@@ -73,9 +88,9 @@ function Sidebar({ title = "Menu", active = "", role: roleProp, variant = "defau
           <button
             type="button"
             onClick={handleLogout}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-sm text-[#d7e6ff] hover:bg-blue-500/20"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[10px] bg-white/5 px-4 py-[10px] text-sm text-slate-200 transition-colors duration-200 hover:bg-[rgba(255,255,255,0.08)]"
           >
-            <FiLogOut />
+            <FiLogOut className="h-4 w-4" />
             Logout
           </button>
         </div>
@@ -140,7 +155,7 @@ function Sidebar({ title = "Menu", active = "", role: roleProp, variant = "defau
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("userName");
-    navigate("/login", { replace: true });
+    navigate("/login");
   }
 
   return (
