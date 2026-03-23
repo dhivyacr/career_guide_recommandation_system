@@ -1,6 +1,9 @@
 import { FiEdit3, FiExternalLink } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 
 function StudentOverview({ profile }) {
+  const navigate = useNavigate();
+
   return (
     <section className="rounded-xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:scale-[1.02]">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -20,19 +23,32 @@ function StudentOverview({ profile }) {
 
         <div className="grid gap-4 sm:grid-cols-1">
           <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Register Number</p>
+            <p className="mt-2 text-base font-medium text-white">{profile.registerNumber || "Not set"}</p>
+          </div>
+          <div>
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">GPA</p>
             <p className="mt-2 text-base font-medium text-white">{profile.gpa}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Mentor Name</p>
+            <p className="mt-2 text-base font-medium text-white">{profile.mentorName || "Mentor not assigned yet"}</p>
           </div>
         </div>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <button type="button" className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-600">
+        <button
+          type="button"
+          onClick={() => navigate("/profile")}
+          className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-600"
+        >
           <FiEdit3 />
           Edit Profile
         </button>
         <button
           type="button"
+          onClick={() => navigate("/portfolio")}
           className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
         >
           <FiExternalLink />

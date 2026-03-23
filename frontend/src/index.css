@@ -274,3 +274,39 @@ body {
   font-size: 16px;
   cursor: pointer;
 }
+
+.heatmap-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: white;
+}
+
+.heatmap-table th,
+.heatmap-table td {
+  color: #ffffff;
+  padding: 12px;
+  text-align: center;
+}
+
+.heatmap-table th {
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.heatmap-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dashboard-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: #2a3f66 transparent;
+}
+
+.dashboard-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-sidebar::-webkit-scrollbar-thumb {
+  background: #2a3f66;
+  border-radius: 10px;
+}

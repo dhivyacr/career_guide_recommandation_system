@@ -1,17 +1,10 @@
 const Student = require("../models/Student");
 const { recommendCareer, recommendCareers } = require("../services/recommendationService");
-const { findSkillGap } = require("../services/skillGapService");
 
-const getRecommendations = (req, res) => {
+const getRecommendations = async (req, res) => {
   const student = req.body || {};
-  const results = recommendCareers(student);
-  const sortedResults = [...results].sort((a, b) => {
-    const scoreA = Number(a.score ?? a.matchScore ?? 0);
-    const scoreB = Number(b.score ?? b.matchScore ?? 0);
-    return scoreB - scoreA;
-  });
-
-  return res.json(sortedResults);
+  const results = await recommendCareers(student, { limit: 5 });
+  return res.json(results);
 };
 
 async function getCareerByRegisterNumber(req, res) {
@@ -42,15 +35,19 @@ async function getCareerByRegisterNumber(req, res) {
       cgpa: Number.parseFloat(student.gpa) || 0
     };
 
-    const career = recommendCareer(normalizedStudent);
-    const skillGap = findSkillGap(normalizedStudent, career);
+    const recommendations = await recommendCareers(normalizedStudent, { limit: 5 });
+    const bestMatch = recommendations[0] || null;
+    const career = bestMatch?.careerName || (await recommendCareer(normalizedStudent));
+    const skillGap = bestMatch?.missingSkills || [];
 
     student.careerRecommendation = career;
+    student.careerPath = student.careerGoal || career;
     student.skillGap = skillGap;
     await student.save();
 
     return res.json({
       careerRecommendation: career,
+      bestMatch,
       skillGap,
       student: {
         name: student.name,
@@ -60,12 +57,7 @@ async function getCareerByRegisterNumber(req, res) {
         skills: student.technicalSkills || [],
         interests: student.interests || []
       },
-      recommendations: recommendCareers(normalizedStudent).slice(0, 2).map((item) => ({
-        careerName: item.title,
-        matchScore: item.matchScore,
-        description: item.description,
-        requiredSkills: item.requiredSkills
-      }))
+      recommendations
     });
   } catch (error) {
     console.error(error);

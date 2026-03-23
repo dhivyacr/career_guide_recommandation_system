@@ -33,6 +33,7 @@ API.interceptors.response.use(
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("userName");
+      localStorage.removeItem("userEmail");
       localStorage.removeItem("studentProfile");
 
       if (window.location.pathname !== "/login") {
@@ -45,6 +46,8 @@ API.interceptors.response.use(
 );
 
 export const getDashboardData = () => API.get("/dashboard");
+export const updateWeeklyGoal = (goalId, completed) => API.put(`/dashboard/weekly-goals/${goalId}`, { completed });
+export const getReadinessReport = (userId) => API.get(`/readiness/${userId}`);
 export const loginUser = (data) => API.post("/auth/login", data);
 export const getAdminAnalytics = () => API.get("/admin/analytics");
 export const getAdminStudents = () => API.get("/admin/students");

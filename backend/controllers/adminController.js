@@ -2,8 +2,7 @@ const User = require("../models/User");
 const CareerRecommendation = require("../models/CareerRecommendation");
 const Student = require("../models/Student");
 const Mentor = require("../models/Mentor");
-const { recommendCareer } = require("../services/recommendationService");
-const { skillGap } = require("../services/skillGapService");
+const { recommendCareer, recommendCareers } = require("../services/recommendationService");
 const { generateLearningPath } = require("../services/learningPathService");
 
 function mapStudentRecord(student) {
@@ -12,6 +11,7 @@ function mapStudentRecord(student) {
     registerNumber: student.regNo || "",
     department: student.degree || "",
     cgpa: Number.parseFloat(student.gpa) || 0,
+    mentorName: student.mentorName || student.mentorId?.name || "Unassigned",
     mentor: student.mentorId
       ? {
           id: student.mentorId._id || student.mentorId,
@@ -132,6 +132,7 @@ async function getStudentPerformance(req, res, next) {
       students: students.map((student) => ({
         name: student.name,
         email: student.email,
+        mentorName: student.mentorName || student.mentorId?.name || "Unassigned",
         mentor: student.mentorId?.name || "Unassigned",
         score: student.performanceScore || 0
       }))
@@ -145,13 +146,25 @@ module.exports = {
   getAnalytics,
   getDashboard,
   getStudentPerformance,
-  async resetStudents(req, res, next) {
+  async clearStudents(req, res, next) {
     try {
+      if (process.env.NODE_ENV === "production") {
+        return res.status(403).json({
+          message: "Student cleanup is disabled in production"
+        });
+      }
+
+      if (req.user?.role !== "admin") {
+        return res.status(403).json({
+          message: "Only admins can clear student records"
+        });
+      }
+
       await Student.deleteMany({});
       await Mentor.updateMany({}, { $set: { students: [], studentsAssigned: 0 } });
 
       return res.status(200).json({
-        message: "All students removed successfully"
+        message: "All student records deleted successfully"
       });
     } catch (error) {
       return next(error);
@@ -161,7 +174,7 @@ module.exports = {
     try {
       const students = await Student.find(buildStudentScope(req))
         .populate("mentorId", "name email")
-        .select("userId name email regNo degree gpa technicalSkills interests mentorId createdAt updatedAt")
+        .select("userId name email regNo degree gpa technicalSkills interests mentorId mentorName createdAt updatedAt")
         .sort({ updatedAt: -1, createdAt: -1 });
 
       const dedupedStudents = dedupeStudents(students).map(mapStudentRecord);
@@ -182,7 +195,7 @@ module.exports = {
     try {
       const students = await Student.find(buildStudentScope(req))
         .populate("mentorId", "name email")
-        .select("userId name email regNo degree gpa technicalSkills interests mentorId createdAt updatedAt")
+        .select("userId name email regNo degree gpa technicalSkills interests mentorId mentorName createdAt updatedAt")
         .sort({ updatedAt: -1, createdAt: -1 });
 
       const dedupedStudents = dedupeStudents(students).map(mapStudentRecord);
@@ -220,8 +233,10 @@ module.exports = {
         careerGoal: student.careerGoal || ""
       };
 
-      const career = recommendCareer(profile);
-      const missingSkills = skillGap({ ...profile, targetCareer: career });
+      const recommendations = await recommendCareers(profile, { limit: 5 });
+      const bestMatch = recommendations[0] || null;
+      const career = bestMatch?.careerName || (await recommendCareer(profile));
+      const missingSkills = bestMatch?.missingSkills || [];
       const learningPath = generateLearningPath(missingSkills);
 
       return res.status(200).json({
@@ -319,6 +334,82 @@ module.exports = {
 
       return res.status(200).json({
         message: "Guidance saved successfully",
+        student: mapStudentRecord(student)
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
+  async getMentors(req, res, next) {
+    try {
+      const mentors = await Mentor.find({})
+        .select("name email")
+        .sort({ name: 1 });
+
+      return res.status(200).json({
+        mentors: mentors.map((mentor) => ({
+          _id: mentor._id,
+          name: mentor.name || "",
+          email: mentor.email || ""
+        }))
+      });
+    } catch (error) {
+      return next(error);
+    }
+  },
+  async assignMentor(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { mentorId = "" } = req.body;
+
+      const student = await Student.findById(id);
+
+      if (!student) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+
+      const previousMentorId = student.mentorId ? String(student.mentorId) : "";
+
+      if (mentorId) {
+        const mentor = await Mentor.findById(mentorId);
+
+        if (!mentor) {
+          return res.status(404).json({ message: "Mentor not found" });
+        }
+
+        if (previousMentorId && previousMentorId !== String(mentor._id)) {
+          await Mentor.findByIdAndUpdate(previousMentorId, {
+            $pull: { students: student._id },
+            $inc: { studentsAssigned: -1 }
+          });
+        }
+
+        if (previousMentorId !== String(mentor._id)) {
+          await Mentor.findByIdAndUpdate(mentor._id, {
+            $addToSet: { students: student._id },
+            $inc: { studentsAssigned: 1 }
+          });
+        }
+
+        student.mentorId = mentor._id;
+        student.mentorName = mentor.name || "Unassigned";
+      } else {
+        if (previousMentorId) {
+          await Mentor.findByIdAndUpdate(previousMentorId, {
+            $pull: { students: student._id },
+            $inc: { studentsAssigned: -1 }
+          });
+        }
+
+        student.mentorId = null;
+        student.mentorName = "Unassigned";
+      }
+
+      await student.save();
+      await student.populate("mentorId", "name email");
+
+      return res.status(200).json({
+        message: "Mentor updated successfully",
         student: mapStudentRecord(student)
       });
     } catch (error) {

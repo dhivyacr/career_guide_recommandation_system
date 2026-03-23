@@ -6,7 +6,7 @@ import "../styles/career.css";
 function Career() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [career, setCareer] = useState("");
+  const [career, setCareer] = useState(null);
   const [skillGap, setSkillGap] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
 
@@ -33,8 +33,9 @@ function Career() {
           return;
         }
 
-        setCareer(response.data?.careerRecommendation || "");
-        setSkillGap(response.data?.skillGap || []);
+        const bestMatch = response.data?.bestMatch || null;
+        setCareer(bestMatch);
+        setSkillGap(bestMatch?.missingSkills || response.data?.skillGap || []);
         setRecommendations(response.data?.recommendations || []);
       } catch (apiError) {
         if (!mounted) {
@@ -61,7 +62,12 @@ function Career() {
         <h2 className="text-2xl font-semibold text-white">Career Recommendation</h2>
         {loading ? <p className="mt-3 text-sm text-[#b4c3d9]">Loading career insights...</p> : null}
         {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
-        {!loading && !error ? <p className="mt-4 text-lg font-medium text-white">{career || "Software Developer"}</p> : null}
+        {!loading && !error ? (
+          <div className="mt-4 space-y-2">
+            <p className="text-lg font-medium text-white">{career?.careerName || "Career recommendations unavailable"}</p>
+            <p className="text-sm text-[#b4c3d9]">{career?.matchPercentage ?? 0}% match based on your latest saved skills.</p>
+          </div>
+        ) : null}
       </section>
 
       {!loading && !error && recommendations.length ? (

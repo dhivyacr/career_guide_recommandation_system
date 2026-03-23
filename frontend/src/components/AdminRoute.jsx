@@ -16,15 +16,17 @@ function isTokenValid(token) {
 function AdminRoute({ children }) {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
+  const email = localStorage.getItem("userEmail");
 
   if (!role || !isTokenValid(token)) {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
     return <Navigate to="/login" replace />;
   }
 
-  if (!["faculty", "mentor", "admin"].includes(role)) {
+  if (role !== "admin" || email !== "admin@bitsathy.ac.in") {
     return <Navigate to="/dashboard" replace />;
   }
 

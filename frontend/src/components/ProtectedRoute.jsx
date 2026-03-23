@@ -21,6 +21,7 @@ function ProtectedRoute({ children }) {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
     return <Navigate to="/login" replace />;
   }
 

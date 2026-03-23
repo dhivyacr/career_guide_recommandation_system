@@ -16,13 +16,14 @@ function Navbar() {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
     navigate("/", { replace: true });
   }
 
   const isLanding = location.pathname === "/";
 
   return (
-    <header className="sticky top-0 z-30 border-b border-blue-400/20 bg-[#0b1d33]/85 backdrop-blur">
+    <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/10 bg-[#08111f] backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link to="/" className="text-lg font-bold text-white">
           Intelligent Career <span className="text-ai-accent">Guidance</span>

@@ -1,7 +1,8 @@
 const Student = require("../models/Student");
 const { recommendCareer, recommendCareers } = require("../services/recommendationService");
-const { buildSkillAnalytics, calculateReadiness, findSkillGap } = require("../services/skillGapService");
-const { generateLearningPath } = require("../services/learningPathService");
+const { buildSkillAnalytics, findSkillGap } = require("../services/skillGapService");
+const { getOrCreateWeeklyGoals, toggleWeeklyGoal } = require("../services/weeklyGoalService");
+const { buildReadinessReport } = require("../services/readinessService");
 
 function mapStudent(student) {
   return {
@@ -11,8 +12,51 @@ function mapStudent(student) {
     cgpa: Number.parseFloat(student.gpa) || 0,
     skills: student.technicalSkills || [],
     interests: student.interests || [],
+    mentorName: student.mentorName || "Unassigned",
     adminGuidance: student.mentorFeedback || student.mentorReview || "",
     mentorGuidance: student.mentorGuidance || []
+  };
+}
+
+async function buildDashboardInsights(student, userId) {
+  const profile = {
+    name: student.name,
+    department: student.degree,
+    degree: student.degree,
+    year: student.year || "",
+    email: student.email || "",
+    careerGoal: student.careerGoal || "",
+    cgpa: student.gpa,
+    gpa: student.gpa,
+    skills: student.technicalSkills || [],
+    technicalSkills: student.technicalSkills || [],
+    interests: student.interests || []
+  };
+
+  const recommendations = await recommendCareers(profile, { limit: 5 });
+  const bestMatch = recommendations[0] || null;
+  const career = bestMatch?.careerName || (await recommendCareer(profile));
+  const skillMetrics = buildSkillAnalytics(profile, career);
+  const skillGap = findSkillGap(profile, career);
+  const weeklyGoal = await getOrCreateWeeklyGoals(userId, skillGap);
+  const readinessReport = buildReadinessReport({
+    student,
+    bestMatch,
+    weeklyGoal,
+    career,
+    skillGap
+  });
+  const readiness = readinessReport.readinessScore;
+
+  return {
+    career,
+    skillGap,
+    bestMatch,
+    recommendations,
+    skillMetrics,
+    readiness,
+    readinessReport,
+    weeklyGoal
   };
 }
 
@@ -52,27 +96,16 @@ async function getDashboard(req, res) {
       });
     }
 
-    const profile = {
-      name: student.name,
-      department: student.degree,
-      cgpa: student.gpa,
-      skills: student.technicalSkills || [],
-      interests: student.interests || []
-    };
-
-    const career = recommendCareer(profile);
-    const skillGap = findSkillGap(profile, career);
-    const recommendations = recommendCareers(profile).slice(0, 2);
-    const skillMetrics = buildSkillAnalytics(profile, career);
-    const readiness = calculateReadiness(profile, career);
-    const learningPaths = generateLearningPath(skillGap).map((path) => ({
-      skill: path.skill,
-      title: path.resources?.[0]?.title || `${path.skill} Foundations`,
-      subtitle: path.resources?.[0]?.platform || "Curated Learning Path",
-      lessons: Math.max(8, (path.resources?.length || 1) * 8),
-      duration: `${Math.max(4, (path.resources?.length || 1) * 4)}h total`,
-      resources: path.resources || []
-    }));
+    const {
+      career,
+      skillGap,
+      bestMatch,
+      recommendations,
+      skillMetrics,
+      readiness,
+      readinessReport,
+      weeklyGoal
+    } = await buildDashboardInsights(student, req.user.id);
 
     student.careerRecommendation = career;
     student.skillGap = skillGap;
@@ -82,24 +115,14 @@ async function getDashboard(req, res) {
       student: mapStudent(student),
       career,
       skillGap,
-      recommendations: recommendations.map((item) => ({
-        careerName: item.title,
-        matchScore: item.matchScore,
-        description: item.description,
-        requiredSkills: item.requiredSkills
-      })),
+      bestMatch,
+      recommendations,
       analytics: {
         skillMetrics,
         readiness,
-        weeklyGoal: {
-          completed: Math.max(0, Math.min(3, 3 - Math.min(skillGap.length, 3))),
-          total: 3,
-          targetText: skillGap.length
-            ? `Complete 3 modules in ${skillGap[0]} to improve your ${career} readiness.`
-            : "Maintain your momentum by completing 3 advanced learning modules this week."
-        }
+        readinessReport,
+        weeklyGoal
       },
-      learningPaths,
       adminGuidance: student.mentorFeedback || student.mentorReview || "",
       mentorGuidance: student.mentorGuidance || []
     });
@@ -110,6 +133,39 @@ async function getDashboard(req, res) {
   }
 }
 
+async function updateWeeklyGoal(req, res) {
+  try {
+    const { goalId } = req.params;
+    const completed = Boolean(req.body?.completed);
+    const weeklyGoal = await toggleWeeklyGoal(req.user.id, goalId, completed);
+
+    if (!weeklyGoal) {
+      return res.status(404).json({
+        message: "Weekly goal not found"
+      });
+    }
+
+    const student = await Student.findOne({
+      $or: [
+        { userId: req.user.id },
+        { email: req.user.email }
+      ]
+    });
+
+    const { readinessReport } = await buildDashboardInsights(student, req.user.id);
+
+    return res.json({
+      weeklyGoal,
+      readinessReport
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to update weekly goal"
+    });
+  }
+}
+
 module.exports = {
-  getDashboard
+  getDashboard,
+  updateWeeklyGoal
 };

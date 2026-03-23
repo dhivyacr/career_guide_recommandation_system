@@ -1,7 +1,11 @@
 const Student = require("../models/Student");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
-const { recommendCareer } = require("../services/recommendationService");
+const { recommendCareer, recommendCareers } = require("../services/recommendationService");
+
+function getMentorName(student = {}) {
+  return student.mentorName || student.mentorId?.name || "";
+}
 
 function normalizeRegisterNumber(value) {
   return String(value || "")
@@ -85,6 +89,7 @@ async function ensureStudentProfileForUser(user) {
     technicalSkills: [],
     interests: [],
     careerGoal: "",
+    mentorName: "",
     profileCompleted: false,
     role: "student"
   };
@@ -106,6 +111,28 @@ async function saveProfile(req, res) {
       return res.status(400).json({ message: "Only bitsathy.ac.in email allowed" });
     }
 
+    const technicalSkills = Array.isArray(payload.technicalSkills)
+      ? payload.technicalSkills
+      : Array.isArray(req.body?.technicalSkills)
+        ? req.body.technicalSkills
+        : Array.isArray(req.body?.skills)
+          ? req.body.skills
+          : [];
+    const interests = Array.isArray(payload.interests)
+      ? payload.interests
+      : Array.isArray(req.body?.interests)
+        ? req.body.interests
+        : [];
+    const recommendations = await recommendCareers(
+      {
+        technicalSkills,
+        skills: technicalSkills,
+        interests
+      },
+      { limit: 5 }
+    );
+    const bestMatch = recommendations[0] || null;
+
     const student = await Student.findOneAndUpdate(
       { email },
       {
@@ -116,16 +143,13 @@ async function saveProfile(req, res) {
           regNo: payload.regNo || normalizeRegisterNumber(req.body?.regNo || req.body?.registerNumber),
           degree: payload.degree || String(req.body?.department || "").trim(),
           gpa: Number(payload.gpa ?? req.body?.cgpa ?? 0) || 0,
-          technicalSkills: Array.isArray(payload.technicalSkills)
-            ? payload.technicalSkills
-            : Array.isArray(req.body?.technicalSkills)
-              ? req.body.technicalSkills
-              : Array.isArray(req.body?.skills)
-                ? req.body.skills
-                : [],
-          interests: Array.isArray(payload.interests) ? payload.interests : Array.isArray(req.body?.interests) ? req.body.interests : [],
+          technicalSkills,
+          interests,
           careerGoal: String(payload.careerGoal || req.body?.careerGoal || "").trim(),
-          careerPath: String(payload.careerPath || payload.careerGoal || req.body?.careerGoal || "").trim(),
+          careerRecommendation: bestMatch?.careerName || "",
+          careerPath: String(payload.careerPath || payload.careerGoal || req.body?.careerGoal || bestMatch?.careerName || "").trim(),
+          skillGap: bestMatch?.missingSkills || [],
+          mentorName: String(payload.mentorName || req.body?.mentorName || "").trim(),
           profileComplete: true,
           profileCompleted: true,
           role: "student"
@@ -181,6 +205,15 @@ async function updateProfile(req, res) {
       : Array.isArray(payload.interests)
         ? payload.interests
         : existingStudent?.interests || [];
+    const recommendations = await recommendCareers(
+      {
+        technicalSkills: payload.technicalSkills,
+        skills: payload.technicalSkills,
+        interests: payload.interests
+      },
+      { limit: 5 }
+    );
+    const bestMatch = recommendations[0] || null;
 
     if (payload.email && payload.email !== existingStudent?.email) {
       const emailOwner = await Student.findOne({
@@ -220,7 +253,12 @@ async function updateProfile(req, res) {
       payload.password = existingStudent?.password;
     }
 
-    payload.careerPath = String(payload.careerPath || payload.careerGoal || existingStudent?.careerPath || "").trim();
+    payload.careerRecommendation = bestMatch?.careerName || existingStudent?.careerRecommendation || "";
+    payload.skillGap = bestMatch?.missingSkills || [];
+    payload.mentorName = String(payload.mentorName ?? req.body?.mentorName ?? existingStudent?.mentorName ?? "").trim();
+    payload.careerPath = String(
+      payload.careerPath || payload.careerGoal || bestMatch?.careerName || existingStudent?.careerPath || ""
+    ).trim();
     payload.userId = userId;
 
     const student = await Student.findOneAndUpdate(
@@ -275,7 +313,10 @@ exports.getProfile = async (req, res) => {
     const student = await ensureStudentProfileForUser(req.user);
 
     return res.json({
-      student
+      student: {
+        ...student.toObject(),
+        mentorName: getMentorName(student)
+      }
     });
   } catch (error) {
     return res.status(500).json({
@@ -309,6 +350,7 @@ exports.getProfileByEmail = async (req, res) => {
         department: student.degree || "",
         cgpa: Number(student.gpa || 0),
         skills: student.technicalSkills || [],
+        mentorName: getMentorName(student),
         careerPath: student.careerPath || student.careerGoal || student.careerRecommendation || "",
         mentorFeedback: student.mentorFeedback || student.mentorReview || ""
       }
@@ -332,7 +374,7 @@ exports.getAllStudents = async (req, res) => {
       ]
     })
       .sort({ updatedAt: -1 })
-      .select("name email regNo degree gpa technicalSkills interests careerPath careerGoal skillGap mentorFeedback mentorReview updatedAt");
+      .select("name email regNo degree gpa technicalSkills interests careerPath careerGoal skillGap mentorFeedback mentorReview mentorName updatedAt");
 
     return res.json(
       students.map((student) => ({
@@ -344,6 +386,7 @@ exports.getAllStudents = async (req, res) => {
         cgpa: Number(student.gpa || 0),
         skills: student.technicalSkills || [],
         interests: student.interests || [],
+        mentorName: getMentorName(student),
         careerGoal: student.careerGoal || "",
         careerPath: student.careerPath || student.careerGoal || student.careerRecommendation || "",
         skillGap: student.skillGap || [],
@@ -409,10 +452,14 @@ exports.getStudentByRegisterNumber = async (req, res) => {
       });
     }
 
-    const recommendation = recommendCareer({
+    const recommendations = await recommendCareers({
       technicalSkills: student.technicalSkills || [],
       skills: student.technicalSkills || []
-    });
+    }, { limit: 5 });
+    const recommendation = recommendations[0]?.careerName || (await recommendCareer({
+      technicalSkills: student.technicalSkills || [],
+      skills: student.technicalSkills || []
+    }));
 
     return res.json({
       student: {
@@ -422,12 +469,14 @@ exports.getStudentByRegisterNumber = async (req, res) => {
         cgpa: Number.parseFloat(student.gpa) || 0,
         skills: student.technicalSkills || [],
         interests: student.interests || [],
+        mentorName: getMentorName(student),
         recommendation,
         careerPath: student.careerPath || student.careerGoal || recommendation,
-        skillGap: student.skillGap || [],
+        skillGap: student.skillGap?.length ? student.skillGap : recommendations[0]?.missingSkills || [],
         mentorFeedback: student.mentorFeedback || student.mentorReview || "",
         adminGuidance: student.mentorFeedback || student.mentorReview || "",
-        mentorGuidance: student.mentorGuidance || []
+        mentorGuidance: student.mentorGuidance || [],
+        recommendations
       }
     });
   } catch (error) {
@@ -450,7 +499,8 @@ exports.getGuidance = async (req, res) => {
     return res.json({
       mentorGuidance: student.mentorGuidance || [],
       adminGuidance: student.mentorFeedback || student.mentorReview || "",
-      mentorFeedback: student.mentorFeedback || student.mentorReview || ""
+      mentorFeedback: student.mentorFeedback || student.mentorReview || "",
+      mentorName: getMentorName(student)
     });
   } catch (error) {
     return res.status(500).json({
@@ -464,12 +514,16 @@ exports.recommendCareerForStudent = async (req, res) => {
     const skills = Array.isArray(req.body?.skills) ? req.body.skills : [];
     const interests = Array.isArray(req.body?.interests) ? req.body.interests : [];
 
-    const recommendedCareer = recommendCareer({
+    const recommendations = await recommendCareers({
       skills,
       interests
-    });
+    }, { limit: 5 });
+    const recommendedCareer = recommendations[0]?.careerName || (await recommendCareer({
+      skills,
+      interests
+    }));
 
-    return res.json({ recommendedCareer });
+    return res.json({ recommendedCareer, recommendations });
   } catch (error) {
     return res.status(500).json({
       message: "Error generating career recommendation"

@@ -10,10 +10,13 @@ import Login from "./pages/Login";
 import StudentProfile from "./pages/StudentProfile";
 import CompleteProfile from "./pages/CompleteProfile";
 import Career from "./pages/Career";
+import Portfolio from "./pages/Portfolio";
 import SettingsPage from "./pages/SettingsPage";
-import StudentDashboardLayout from "./layouts/StudentDashboardLayout";
+import DashboardLayout from "./layouts/DashboardLayout";
 import AdminStudents from "./pages/AdminStudents";
 import AdminStudentProfile from "./pages/AdminStudentProfile";
+import Reports from "./pages/admin/Reports";
+import CareerMentor from "./pages/CareerMentor";
 
 function App() {
   return (
@@ -25,14 +28,17 @@ function App() {
         <Route
           element={
             <ProtectedRoute>
-              <StudentDashboardLayout />
+              <DashboardLayout role="student" />
             </ProtectedRoute>
           }
         >
           <Route path="/dashboard" element={<StudentDashboard />} />
+          <Route path="/student-dashboard" element={<StudentDashboard />} />
           <Route path="/complete-profile" element={<CompleteProfile />} />
           <Route path="/profile" element={<StudentProfile />} />
           <Route path="/career" element={<Career />} />
+          <Route path="/career-mentor" element={<CareerMentor />} />
+          <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/student-profile" element={<Navigate to="/profile" replace />} />
         </Route>
@@ -62,45 +68,21 @@ function App() {
           }
         />
         <Route
-          path="/admin"
           element={
             <AdminRoute>
-              <AdminDashboard />
+              <DashboardLayout role="admin" />
             </AdminRoute>
           }
-        />
-        <Route
-          path="/admin-dashboard"
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/mentor-dashboard"
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/students"
-          element={
-            <AdminRoute>
-              <AdminStudents />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/student/:registerNumber"
-          element={
-            <AdminRoute>
-              <AdminStudentProfile />
-            </AdminRoute>
-          }
-        />
+        >
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/leaderboard" element={<Navigate to="/admin/students" replace />} />
+          <Route path="/admin/reports" element={<Reports />} />
+          <Route path="/admin/settings" element={<Navigate to="/admin-dashboard" replace />} />
+          <Route path="/mentor-dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/students" element={<AdminStudents />} />
+          <Route path="/admin/student/:registerNumber" element={<AdminStudentProfile />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppLayout>

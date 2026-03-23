@@ -23,15 +23,14 @@ function Login() {
     const normalizedEmail = String(form.email || "").trim().toLowerCase();
 
     if (!normalizedEmail.endsWith("@bitsathy.ac.in")) {
-      setMessage("Only BIT email IDs are allowed");
+      setMessage("Please use your BIT institutional email.");
       return;
     }
 
     try {
       const response = await loginUser({ ...form, email: normalizedEmail });
       const user = response.data?.user;
-      const student = response.data?.student;
-      const role = response.data?.role || user?.role;
+      const role = user?.role;
       const token = response.data?.token;
 
       if (!role || !token) {
@@ -41,23 +40,9 @@ function Login() {
 
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
-      localStorage.setItem("userName", user?.name || "");
-      if (student || user?.registerNumber) {
-        const existingProfile = JSON.parse(localStorage.getItem("studentProfile") || "{}");
-        localStorage.setItem(
-          "studentProfile",
-          JSON.stringify({
-            ...existingProfile,
-            name: student?.name || user?.name || existingProfile.name || "",
-            email: student?.email || user?.email || existingProfile.email || "",
-            registerNumber: student?.registerNumber || user?.registerNumber || existingProfile.registerNumber || "",
-            department: student?.department || existingProfile.department || "",
-            cgpa: student?.cgpa ?? existingProfile.cgpa ?? 0,
-            skills: student?.skills || existingProfile.skills || [],
-            interests: student?.interests || existingProfile.interests || []
-          })
-        );
-      }
+      localStorage.setItem("userName", user?.email?.split("@")[0] || normalizedEmail.split("@")[0]);
+      localStorage.setItem("userEmail", user?.email || normalizedEmail);
+      localStorage.removeItem("studentProfile");
 
       if (role === "faculty") {
         navigate("/mentor-dashboard");
@@ -75,7 +60,7 @@ function Login() {
       }
 
       if (role === "student") {
-        navigate("/dashboard");
+        navigate("/student-dashboard");
         return;
       }
 

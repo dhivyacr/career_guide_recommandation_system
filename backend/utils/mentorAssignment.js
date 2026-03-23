@@ -35,7 +35,7 @@ async function assignMentorToStudent(student) {
       $or: [{ mentorId: null }, { mentorId: { $exists: false } }]
     },
     {
-      $set: { mentorId: mentor._id }
+      $set: { mentorId: mentor._id, mentorName: mentor.name || "Unassigned" }
     },
     {
       new: true

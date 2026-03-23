@@ -1,4 +1,5 @@
 const dotenv = require("dotenv");
+
 dotenv.config();
 
 const express = require("express");
@@ -13,6 +14,7 @@ const skillGapRoutes = require("./routes/skillGapRoutes");
 const learningPathRoutes = require("./routes/learningPathRoutes");
 const aiAdviceRoutes = require("./routes/aiAdviceRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const readinessRoutes = require("./routes/readinessRoutes");
 const adminNoteRoutes = require("./routes/adminNoteRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const mentorRoutes = require("./routes/mentorRoutes");
@@ -20,27 +22,17 @@ const mentorRoutes = require("./routes/mentorRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-/* -------------------------------
-   Root route (for browser test)
--------------------------------- */
 app.get("/", (req, res) => {
-  res.send("🚀 Intelligent Career Guidance API running");
+  res.send("Intelligent Career Guidance API running");
 });
 
-/* -------------------------------
-   Health check route
--------------------------------- */
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-/* -------------------------------
-   API Routes
--------------------------------- */
 app.use("/api", apiRoutes);
 app.use("/api", studentRoutes);
 app.use("/api/careers", recommendRoutes);
@@ -49,13 +41,11 @@ app.use("/api/skills", skillGapRoutes);
 app.use("/api/learning", learningPathRoutes);
 app.use("/api/ai", aiAdviceRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/readiness", readinessRoutes);
 app.use("/api/admin-notes", adminNoteRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/mentor", mentorRoutes);
 
-/* -------------------------------
-   Global error handler
--------------------------------- */
 app.use((err, req, res, next) => {
   console.error("Server Error:", err);
   res.status(500).json({
@@ -63,17 +53,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-/* -------------------------------
-   Start server after DB connect
--------------------------------- */
 connectDB()
   .then(async () => {
-
-    console.log("MongoDB connected");
-
-    // seed careers if DB empty
     const seedResult = await seedCareersIfEmpty();
-
     if (seedResult.seeded) {
       console.log(`Career seed completed with ${seedResult.count} records`);
     }
@@ -81,7 +63,6 @@ connectDB()
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
-
   })
   .catch((error) => {
     console.error("Failed to connect DB:", error);
