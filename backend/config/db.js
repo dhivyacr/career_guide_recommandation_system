@@ -11,7 +11,11 @@ async function connectDB() {
     return connectionPromise;
   }
 
-  const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/intelligent_career_guidance";
+  const mongoUri = process.env.MONGO_URI;
+
+  if (!mongoUri) {
+    throw new Error("MONGO_URI is not defined");
+  }
 
   connectionPromise = mongoose.connect(mongoUri).then((connection) => {
     console.log("MongoDB connected");
