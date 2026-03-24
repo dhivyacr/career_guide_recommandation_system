@@ -1,5 +1,5 @@
-import axios from "axios";
+import API from "./api";
 
 export const getLearningPath = (missingSkills) => {
-  return axios.post("http://localhost:5000/api/learning/learning-path", { missingSkills });
+  return API.post("/learning/learning-path", { missingSkills });
 };

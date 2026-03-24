@@ -1,5 +1,5 @@
-import axios from "axios";
+import API from "./api";
 
 export const getSkillGap = (profile) => {
-  return axios.post("http://localhost:5000/api/skills/skill-gap", profile);
+  return API.post("/skills/skill-gap", profile);
 };
